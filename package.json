@@ -1,0 +1,26 @@
+{
+  "dependencies": {
+    "inquirer": "^9.1.4",
+    "mysql2": "^2.3.3",
+    "node": "^19.3.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "name": "week-12-challenge",
+  "type": "module",
+  "description": "",
+  "version": "1.0.0",
+  "main": "server.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/takubmf/week-12-challenge.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/takubmf/week-12-challenge/issues"
+  },
+  "homepage": "https://github.com/takubmf/week-12-challenge#readme"
+}
