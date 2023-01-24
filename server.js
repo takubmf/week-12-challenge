@@ -6,7 +6,7 @@ require('dotenv').config();
 const con = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: process.env.MYSQL_PASSWORD,
+    password: process.env.DB_PASSWORD,
     database: 'employee_db'
   });
   
@@ -36,7 +36,7 @@ const promptUser = () => {
                 'View department budgets']
     }
   ]).then(function(val) {
-    switch (val.choice) {
+    switch (val.choices) {
       case "View departments":
         viewDepartments();
           break;
@@ -75,7 +75,7 @@ const promptUser = () => {
   console.log('Showing all departments...\n');
   const sql = `SELECT department.id AS id, department.name AS department FROM department`; 
 
-  connection.promise().query(sql, (err, rows) => {
+  con.promise().query(sql, (err, rows) => {
     if (err) throw err;
     console.table(rows);
     promptUser();
@@ -89,11 +89,13 @@ viewRoles = () => {
                FROM role
                INNER JOIN department ON role.department_id = department.id`;
   
-  connection.promise().query(sql, (err, rows) => {
-    if (err) throw err; 
-    console.table(rows); 
-    promptUser();
+  con.promise().query(sql)
+  .then(([rows]) => {
+    let departments = rows
+    console.table(departments)
   })
+  .then(() => promptUser())
+  .catch(err => console.error(err))
 };
 
 addDepartment = () => {
@@ -115,11 +117,11 @@ addDepartment = () => {
     .then(answer => {
       const sql = `INSERT INTO department (name)
                   VALUES (?)`;
-      connection.query(sql, answer.addDept, (err, result) => {
+      con.query(sql, answer.addDept, (err, result) => {
         if (err) throw err;
         console.log('Added ' + answer.addDept + " to departments!"); 
 
-        showDepartments();
+        viewDepartments();
     });
   });
 };
@@ -190,7 +192,7 @@ addRole = () => {
 
       const roleSql = `SELECT name, id FROM department`; 
 
-      connection.promise().query(roleSql, (err, data) => {
+      con.promise().query(roleSql, (err, data) => {
         if (err) throw err; 
     
         const dept = data.map(({ name, id }) => ({ name: name, value: id }));
@@ -210,7 +212,7 @@ addRole = () => {
             const sql = `INSERT INTO role (title, salary, department_id)
                         VALUES (?, ?, ?)`;
 
-            connection.query(sql, params, (err, result) => {
+            con.query(sql, params, (err, result) => {
               if (err) throw err;
               console.log('Added' + answer.role + " to roles!"); 
 
@@ -255,7 +257,7 @@ addRole = () => {
 
       const roleSql = `SELECT name, id FROM department`; 
 
-      connection.promise().query(roleSql, (err, data) => {
+      con.promise().query(roleSql, (err, data) => {
         if (err) throw err; 
     
         const dept = data.map(({ name, id }) => ({ name: name, value: id }));
@@ -275,7 +277,7 @@ addRole = () => {
             const sql = `INSERT INTO role (title, salary, department_id)
                         VALUES (?, ?, ?)`;
 
-            connection.query(sql, params, (err, result) => {
+            con.query(sql, params, (err, result) => {
               if (err) throw err;
               console.log('Added' + answer.role + " to roles!"); 
 
@@ -289,7 +291,7 @@ addRole = () => {
 updateEmployee = () => {
   const employeeSql = `SELECT * FROM employee`;
 
-  connection.promise().query(employeeSql, (err, data) => {
+  con.promise().query(employeeSql, (err, data) => {
     if (err) throw err; 
 
   const employees = data.map(({ id, first_name, last_name }) => ({ name: first_name + " "+ last_name, value: id }));
@@ -309,7 +311,7 @@ updateEmployee = () => {
 
         const roleSql = `SELECT * FROM role`;
 
-        connection.promise().query(roleSql, (err, data) => {
+        con.promise().query(roleSql, (err, data) => {
           if (err) throw err; 
 
           const roles = data.map(({ id, title }) => ({ name: title, value: id }));
@@ -332,7 +334,7 @@ updateEmployee = () => {
 
                 const sql = `UPDATE employee SET role_id = ? WHERE id = ?`;
 
-                connection.query(sql, params, (err, result) => {
+                con.query(sql, params, (err, result) => {
                   if (err) throw err;
                 console.log("Employee has been updated!");
               
@@ -347,7 +349,7 @@ updateEmployee = () => {
 updateManager = () => {
   const employeeSql = `SELECT * FROM employee`;
 
-  connection.promise().query(employeeSql, (err, data) => {
+  con.promise().query(employeeSql, (err, data) => {
     if (err) throw err; 
 
   const employees = data.map(({ id, first_name, last_name }) => ({ name: first_name + " "+ last_name, value: id }));
@@ -367,7 +369,7 @@ updateManager = () => {
 
         const managerSql = `SELECT * FROM employee`;
 
-          connection.promise().query(managerSql, (err, data) => {
+          con.promise().query(managerSql, (err, data) => {
             if (err) throw err; 
 
           const managers = data.map(({ id, first_name, last_name }) => ({ name: first_name + " "+ last_name, value: id }));
@@ -390,7 +392,7 @@ updateManager = () => {
                     
                     const sql = `UPDATE employee SET manager_id = ? WHERE id = ?`;
 
-                    connection.query(sql, params, (err, result) => {
+                    con.query(sql, params, (err, result) => {
                       if (err) throw err;
                     console.log("Employee has been updated!");
                   
@@ -411,7 +413,7 @@ employeeDepartment = () => {
                LEFT JOIN role ON employee.role_id = role.id 
                LEFT JOIN department ON role.department_id = department.id`;
 
-  connection.promise().query(sql, (err, rows) => {
+  con.promise().query(sql, (err, rows) => {
     if (err) throw err; 
     console.table(rows); 
     promptUser();
@@ -421,7 +423,7 @@ employeeDepartment = () => {
 deleteDepartment = () => {
   const deptSql = `SELECT * FROM department`; 
 
-  connection.promise().query(deptSql, (err, data) => {
+  con.promise().query(deptSql, (err, data) => {
     if (err) throw err; 
 
     const dept = data.map(({ name, id }) => ({ name: name, value: id }));
@@ -438,7 +440,7 @@ deleteDepartment = () => {
         const dept = deptChoice.dept;
         const sql = `DELETE FROM department WHERE id = ?`;
 
-        connection.query(sql, dept, (err, result) => {
+        con.query(sql, dept, (err, result) => {
           if (err) throw err;
           console.log("Successfully deleted!"); 
 
@@ -451,7 +453,7 @@ deleteDepartment = () => {
 deleteRole = () => {
   const roleSql = `SELECT * FROM role`; 
 
-  connection.promise().query(roleSql, (err, data) => {
+  con.promise().query(roleSql, (err, data) => {
     if (err) throw err; 
 
     const role = data.map(({ title, id }) => ({ name: title, value: id }));
@@ -468,7 +470,7 @@ deleteRole = () => {
         const role = roleChoice.role;
         const sql = `DELETE FROM role WHERE id = ?`;
 
-        connection.query(sql, role, (err, result) => {
+        con.query(sql, role, (err, result) => {
           if (err) throw err;
           console.log("Successfully deleted!"); 
 
@@ -481,7 +483,7 @@ deleteRole = () => {
 deleteEmployee = () => {
   const employeeSql = `SELECT * FROM employee`;
 
-  connection.promise().query(employeeSql, (err, data) => {
+  con.promise().query(employeeSql, (err, data) => {
     if (err) throw err; 
 
   const employees = data.map(({ id, first_name, last_name }) => ({ name: first_name + " "+ last_name, value: id }));
@@ -499,7 +501,7 @@ deleteEmployee = () => {
 
         const sql = `DELETE FROM employee WHERE id = ?`;
 
-        connection.query(sql, employee, (err, result) => {
+        con.query(sql, employee, (err, result) => {
           if (err) throw err;
           console.log("Successfully Deleted!");
         
@@ -518,10 +520,10 @@ viewBudget = () => {
                FROM  role  
                JOIN department ON role.department_id = department.id GROUP BY  department_id`;
   
-  connection.promise().query(sql, (err, rows) => {
+  con.promise().query(sql, (err, rows) => {
     if (err) throw err; 
     console.table(rows);
 
-    promptUser(); 
   });            
 };
+promptUser(); 
