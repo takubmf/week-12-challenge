@@ -71,18 +71,19 @@ const promptUser = () => {
   })
 };
 
- viewDepartments = () => {
+const viewDepartments = () => {
   console.log('Showing all departments...\n');
   const sql = `SELECT department.id AS id, department.name AS department FROM department`; 
 
-  con.promise().query(sql, (err, rows) => {
-    if (err) throw err;
+  con.promise().query(sql)
+    .then(([rows]) => {
     console.table(rows);
     promptUser();
-  });
+  })
+  .catch(err => console.error(err));
 };
 
-viewRoles = () => {
+const viewRoles = () => {
   console.log('Showing all roles...\n');
 
   const sql = `SELECT role.id, role.title, department.name AS department
@@ -98,7 +99,7 @@ viewRoles = () => {
   .catch(err => console.error(err))
 };
 
-addDepartment = () => {
+const addDepartment = () => {
   inquirer.prompt([
     {
       type: 'input', 
@@ -126,39 +127,71 @@ addDepartment = () => {
   });
 };
 
-addRole = () => {
-  let deps = [];
-  for (dep of departments) {
-    deps.push(dep.getName());
-  }
-
-  inquirer.prompt(roleQuestions).then((answer) => {
-    let title = answer.role_title;
-    let salary = answer.role_salary;
-
-    inquirer
-      .prompt({
-        name: "department",
-        type: "list",
-        message: "Select department",
-        choices: deps,
-      })
-      .then((input) => {
-        let index = deps.indexOf(input.department);
-        let id = departments[index].getID();
-        let sql = `INSERT INTO role (department_id, title, salary) VALUES ("${id}", "${title}", "${salary}");`;
-        con.query(sql, (err, row) => {
+const addEmployee = () => {
+   inquirer.prompt([
+    {
+      type:'input',
+      name: "first",
+      message: "what is the first name of the employee?",
+      validate: answer =>{
+        if(answer !== ''){
+          return true;
+        }
+        {
+          return"Employee's first name must conaint at least one character"
+        }
+      }
+    },
+    {
+      type:'input',
+      name: "last",
+      message: "what is the last name of the employee?",
+      validate: answer =>{
+        if(answer !== ''){
+          return true;
+        }
+        {
+          return"Employee's first name must conaint at least one character"
+        }
+      }
+    },
+    {
+      type:'input',
+      name:'role id',
+      message: 'what is the role id of for this employee',
+      validate: answer =>{
+        if (isNan(answer) === false){
+          return true;
+        }
+        return false;
+      }
+    },
+    {
+      type:'input',
+      name:'manager id',
+      message: 'what is the manager id for this employee',
+      validate: answer =>{
+        if (isNan(answer) === false){
+          return true;
+        }
+        return false;
+      }
+    }
+  ])
+  .then(function(answer) {
+    con.query("INSERT INTO employee SET ?",
+        {first_name: answer.first_name,
+          last_name: answer.last_name,
+          role_id: answer.role_id || 0,
+          manager_id: answer.manager_id || 0},
+        function(err) {
           if (err) throw err;
-          let temp = new Role(row.insertId, title, salary, id);
-          roles.push(temp);
-          console.log("Role added");
-          start();
+          console.log("Employyee has been added!");
+          run();
         });
       });
-  });
-};
-
-addRole = () => {
+}
+const addRole = () => {
   inquirer.prompt([
     {
       type: 'input', 
@@ -178,10 +211,10 @@ addRole = () => {
       name: 'salary',
       message: "What is the salary of this role?",
       validate: addSalary => {
-        if (isNAN(addSalary)) {
+        if (typeof addSalary === 'string') {
             return true;
         } else {
-            console.log('Please enter a salary');
+            console.log('\nPlease enter a salary');
             return false;
         }
       }
@@ -192,10 +225,9 @@ addRole = () => {
 
       const roleSql = `SELECT name, id FROM department`; 
 
-      con.promise().query(roleSql, (err, data) => {
-        if (err) throw err; 
-    
-        const dept = data.map(({ name, id }) => ({ name: name, value: id }));
+      con.promise().query(roleSql)
+        .then(data => {
+        const dept = data[0].map(({ name, id }) => ({ name: name, value: id }));
 
         inquirer.prompt([
         {
@@ -216,79 +248,14 @@ addRole = () => {
               if (err) throw err;
               console.log('Added' + answer.role + " to roles!"); 
 
-              showRoles();
+              viewRoles();
        });
      });
    });
  });
 };
 
-addRole = () => {
-  inquirer.prompt([
-    {
-      type: 'input', 
-      name: 'role',
-      message: "What role do you want to add?",
-      validate: addRole => {
-        if (addRole) {
-            return true;
-        } else {
-            console.log('Please enter a role');
-            return false;
-        }
-      }
-    },
-    {
-      type: 'input', 
-      name: 'salary',
-      message: "What is the salary of this role?",
-      validate: addSalary => {
-        if (isNAN(addSalary)) {
-            return true;
-        } else {
-            console.log('Please enter a salary');
-            return false;
-        }
-      }
-    }
-  ])
-    .then(answer => {
-      const params = [answer.role, answer.salary];
-
-      const roleSql = `SELECT name, id FROM department`; 
-
-      con.promise().query(roleSql, (err, data) => {
-        if (err) throw err; 
-    
-        const dept = data.map(({ name, id }) => ({ name: name, value: id }));
-
-        inquirer.prompt([
-        {
-          type: 'list', 
-          name: 'dept',
-          message: "What department is this role in?",
-          choices: dept
-        }
-        ])
-          .then(deptChoice => {
-            const dept = deptChoice.dept;
-            params.push(dept);
-
-            const sql = `INSERT INTO role (title, salary, department_id)
-                        VALUES (?, ?, ?)`;
-
-            con.query(sql, params, (err, result) => {
-              if (err) throw err;
-              console.log('Added' + answer.role + " to roles!"); 
-
-              showRoles();
-       });
-     });
-   });
- });
-};
-
-updateEmployee = () => {
+const updateEmployee = () => {
   const employeeSql = `SELECT * FROM employee`;
 
   con.promise().query(employeeSql, (err, data) => {
@@ -346,7 +313,7 @@ updateEmployee = () => {
   });
 };
 
-updateManager = () => {
+const updateManager = () => {
   const employeeSql = `SELECT * FROM employee`;
 
   con.promise().query(employeeSql, (err, data) => {
@@ -404,7 +371,7 @@ updateManager = () => {
   });
 };
 
-employeeDepartment = () => {
+const employeeDepartment = () => {
   console.log('Showing employee by departments...\n');
   const sql = `SELECT employee.first_name, 
                       employee.last_name, 
@@ -420,7 +387,7 @@ employeeDepartment = () => {
   });          
 };
 
-deleteDepartment = () => {
+const deleteDepartment = () => {
   const deptSql = `SELECT * FROM department`; 
 
   con.promise().query(deptSql, (err, data) => {
@@ -450,7 +417,7 @@ deleteDepartment = () => {
   });
 };
 
-deleteRole = () => {
+const deleteRole = () => {
   const roleSql = `SELECT * FROM role`; 
 
   con.promise().query(roleSql, (err, data) => {
@@ -480,7 +447,7 @@ deleteRole = () => {
   });
 };
 
-deleteEmployee = () => {
+const deleteEmployee = () => {
   const employeeSql = `SELECT * FROM employee`;
 
   con.promise().query(employeeSql, (err, data) => {
@@ -511,7 +478,7 @@ deleteEmployee = () => {
  });
 };
 
-viewBudget = () => {
+ const viewBudget = () => {
   console.log('Showing budget by department...\n');
 
   const sql = `SELECT department_id AS id, 
@@ -524,6 +491,7 @@ viewBudget = () => {
     if (err) throw err; 
     console.table(rows);
 
-  });            
+  });
 };
+  
 promptUser(); 
